@@ -280,17 +280,60 @@ class ParseResource(ParseBase, Pointer):
         return '<%s:%s>' % (unicode(self.__class__.__name__), self.objectId)
 
 
+class ParseField(object):
+    default = None
+
+    def __init__(self, **kwargs):
+        self._update_attrs(kwargs)
+
+    def _update_attrs(self, dct):
+        for key, value in dct.items():
+            if hasattr(self, key):
+                setattr(self, key, value)
+            else:
+                raise AttributeError('%s does not support attribute %s' % ( 
+                    self.__class__,
+                    key,
+                ))  
+
+
 class ObjectMetaclass(type):
     def __new__(cls, name, bases, dct):
         cls = super(ObjectMetaclass, cls).__new__(cls, name, bases, dct)
         cls.set_endpoint_root()
         cls.Query = QueryManager(cls)
-        return cls
+        module = dct.pop('__module__')
+        fields = cls._get_fields(dct)
+        cls._defaults = cls._get_defaults(dct)
+        return cls 
+
+    def _get_fields(cls, dct):
+        return dict(
+            [   
+                (field, value)
+                for field, value 
+                in dct.items() 
+                if isinstance(value, ParseField)
+            ]   
+        )   
+
+    def _get_defaults(cls, dct):
+        return dict([
+            (field, value.default)
+            for field, value
+            in dct.items()
+            if isinstance(value, ParseField)
+        ])  
 
 
 class Object(ParseResource):
     __metaclass__ = ObjectMetaclass
     ENDPOINT_ROOT = '/'.join([API_ROOT, 'classes'])
+
+    def __init__(self, **kwargs):
+        for key, value in self._defaults.items():
+            setattr(self, key, ParseType.convert_from_parse(value))
+        super(Object, self).__init__(**kwargs)
 
     @classmethod
     def factory(cls, class_name):
@@ -299,6 +342,10 @@ class Object(ParseResource):
         DerivedClass.__name__ = str(class_name)
         DerivedClass.set_endpoint_root()
         return DerivedClass
+
+    @classmethod
+    def defaults(cls):
+        return cls._defaults
 
     @classmethod
     def set_endpoint_root(cls):

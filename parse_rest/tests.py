@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 #-*- coding: utf-8 -*-
 
 """
@@ -14,7 +13,7 @@ import datetime
 
 from core import ResourceRequestNotFound
 from connection import register, ParseBatcher
-from datatypes import GeoPoint, Object, Function
+from datatypes import GeoPoint, Object, Function, ParseField
 from user import User
 import query
 
@@ -71,6 +70,37 @@ class Review(Object):
 
 class CollectedItem(Object):
     pass
+
+
+class Order(Object):
+    total = ParseField(default=0)
+
+
+class ParseFieldTestCase(unittest.TestCase):
+    def test_can_set_existing_property(self):
+        field = ParseField(default=1)
+        self.assertEqual(field.default, 1)
+
+    def test_cannot_set_nonexisting_property(self):
+        self.assertRaises(AttributeError, ParseField, foo=1)
+
+
+class DefaultValueObjectTestCase(unittest.TestCase):
+    def test_object_has_fields_with_default_value(self):
+        order = Order()
+        order.save()
+        self.assertEqual(order.total, 0)
+
+    def test_object_can_have_additional_fields(self):
+        order = Order(number=1)
+        order.save()
+        self.assertEqual(order.total, 0)
+        self.assertEqual(order.number, 1)
+
+    def test_default_can_be_overridden(self):
+        order = Order(total=15)
+        order.save()
+        self.assertEqual(order.total, 15)
 
 
 class TestObject(unittest.TestCase):
