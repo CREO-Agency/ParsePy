@@ -72,8 +72,12 @@ class CollectedItem(Object):
     pass
 
 
+def get_order_number():
+    return 5
+
 class Order(Object):
     total = ParseField(default=0)
+    number = ParseField(default=get_order_number)
 
 
 class ParseFieldTestCase(unittest.TestCase):
@@ -101,6 +105,11 @@ class DefaultValueObjectTestCase(unittest.TestCase):
         order = Order(total=15)
         order.save()
         self.assertEqual(order.total, 15)
+
+    def test_callable_default_gets_value(self):
+        order = Order()
+        order.save()
+        self.assertEqual(order.number, 5)
 
 
 class TestObject(unittest.TestCase):

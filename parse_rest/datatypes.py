@@ -281,7 +281,17 @@ class ParseResource(ParseBase, Pointer):
 
 
 class ParseField(object):
-    default = None
+    _default = None
+
+    def _get_default(self):
+        if callable(self._default):
+            return self._default()
+        else:
+            return self._default
+
+    def _set_default(self, value):
+        self._default = value
+    default = property(_get_default, _set_default)
 
     def __init__(self, **kwargs):
         self._update_attrs(kwargs)
