@@ -14,6 +14,7 @@
 import json
 import collections
 import copy
+import connection
 
 try:
     unicode = unicode
@@ -145,6 +146,10 @@ class Queryset(object):
         if len(results) >= 2:
             raise QueryResourceMultipleResultsReturned
         return results[0]
+
+    def delete(self):
+        batcher = connection.ParseBatcher()
+        batcher.batch_delete(self)
 
     def __repr__(self):
         return unicode(self._fetch())

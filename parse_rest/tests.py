@@ -270,6 +270,11 @@ class TestQuery(unittest.TestCase):
         for s in self.scores:
             s.save()
 
+    def test_delete_queryset(self):
+        qs = GameScore.Query.all()
+        qs.delete()
+        self.assertEqual(GameScore.Query.all().count(), 0)
+
     def testExists(self):
         """test the Queryset.exists() method"""
         for s in range(1, 6):
