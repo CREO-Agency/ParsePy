@@ -270,10 +270,23 @@ class TestQuery(unittest.TestCase):
         for s in self.scores:
             s.save()
 
+    def tearDown(self):
+        '''delete all GameScore and Game objects'''
+        for s in GameScore.Query.all():
+            s.delete()
+        self.game.delete()
+
     def test_delete_queryset(self):
         qs = GameScore.Query.all()
         qs.delete()
         self.assertEqual(GameScore.Query.all().count(), 0)
+
+    def test_indexing(self):
+        qs = GameScore.Query.all()
+        try:
+            qs[0]
+        except TypeError:
+            self.fail('Indexing raised a TypeError')
 
     def testExists(self):
         """test the Queryset.exists() method"""
@@ -361,12 +374,6 @@ class TestQuery(unittest.TestCase):
         tomorrow = today + datetime.timedelta(days=1)
         self.assert_(GameScore.Query.filter(createdAt__lte=tomorrow).count() == 5,
                      'Could not make inequality comparison with dates')
-
-    def tearDown(self):
-        '''delete all GameScore and Game objects'''
-        for s in GameScore.Query.all():
-            s.delete()
-        self.game.delete()
 
 
 class TestFunction(unittest.TestCase):

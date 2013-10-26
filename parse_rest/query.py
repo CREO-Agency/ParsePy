@@ -102,6 +102,12 @@ class Queryset(object):
     def __iter__(self):
         return iter(self._fetch())
 
+    def __getitem__(self, k):
+        #TODO this should be more effecient than fetch but it isn't
+        # Figure out slicing and indexing on parse.com if possible...
+        fetched = self._fetch()
+        return fetched[k]
+
     def _fetch(self, count=False):
         """
         Return a list of objects matching query, or if count == True return
