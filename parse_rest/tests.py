@@ -90,6 +90,9 @@ class ParseFieldTestCase(unittest.TestCase):
 
 
 class DefaultValueObjectTestCase(unittest.TestCase):
+    def tearDown(self):
+        Order.Query.all().delete()
+
     def test_object_has_fields_with_default_value(self):
         order = Order()
         order.save()
