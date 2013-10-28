@@ -58,6 +58,12 @@ class QueryManager(object):
     def get(self, **kw):
         return self.filter(**kw).get()
 
+    def create(self, **kwargs):
+        instance = self.model_class(**kwargs)
+        instance.save()
+        return instance
+
+
 class M2MQueryManager(QueryManager):
 
     def __init__(self, from_class, to_class, instance, joint_class=None):

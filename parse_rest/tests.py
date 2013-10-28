@@ -185,6 +185,10 @@ class TestManyToManyRelations(unittest.TestCase):
         self.customer2.addresses.add(self.address3)
         self.assertEqual(self.customer2.addresses.all()[0], self.address3)
 
+    def test_direct_set_m2m(self):
+        self.customer1.addresses = [self.address1, self.address2]
+        self.assertEqual(self.customer1.addresses.all().count(), 2)
+
 
 class TestObject(unittest.TestCase):
     def setUp(self):
@@ -349,6 +353,10 @@ class TestQuery(unittest.TestCase):
         for s in GameScore.Query.all():
             s.delete()
         self.game.delete()
+
+    def test_create(self):
+        gs = GameScore.Query.create(score=1, player_name="John Doe2", game=self.game)
+        self.assertIsNotNone(gs.objectId)
 
     def test_delete_queryset(self):
         qs = GameScore.Query.all()

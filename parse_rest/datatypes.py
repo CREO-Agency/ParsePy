@@ -354,8 +354,15 @@ class ObjectMetaclass(type):
         cls._defaults = cls._get_defaults(dct)
         cls._m2m_fields = cls._get_m2m_fields(dct)
         for attr, field in cls._get_m2m_fields(dct).items():
+            def m2mgetter(self):
+                return field.query_manager(self)
+
+            def m2msetter(self, val):
+                field.query_manager(self).clear()
+                field.query_manager(self).add(*val)
+
             field.add_to_class(cls)
-            setattr(cls, attr, property(lambda self: field.query_manager(self)))
+            setattr(cls, attr, property(m2mgetter, m2msetter))
             del cls._defaults[attr]
         return cls 
 
