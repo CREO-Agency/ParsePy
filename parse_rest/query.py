@@ -58,6 +58,51 @@ class QueryManager(object):
     def get(self, **kw):
         return self.filter(**kw).get()
 
+class M2MQueryManager(QueryManager):
+
+    def __init__(self, from_class, to_class, instance, joint_class=None):
+        from datatypes import Object
+        if not joint_class:
+            joint_class = type(
+                "%s%ss" % (from_class.__name__, to_class.__name__),
+                (Object,), {}
+            )
+        self.from_class = from_class
+        self.to_class = to_class
+        self.joint_class = joint_class
+        self.instance = instance
+        super(M2MQueryManager, self).__init__(to_class)
+    
+    def all(self):
+        related = self.joint_class.Query.filter(
+            **{ self._from_relation: self.instance }
+        )
+        return self.to_class.Query.filter(objectId__in=[
+            getattr(inst, self._to_relation).objectId for inst in related])
+
+    def add(self, *args):
+        instances = [self.joint_class(
+                **{
+                    self._from_relation: self.instance,
+                    self._to_relation: instance,
+                }
+            ) for instance in args
+        ]
+        batcher = connection.ParseBatcher()
+        batcher.batch_save(instances)
+
+    def clear(self, *args):
+        self.joint_class.Query.all().delete()
+
+    @property
+    def _from_relation(self):
+        return self.from_class.__name__.lower()
+    
+    @property
+    def _to_relation(self):
+        return self.to_class.__name__.lower()
+
+
 
 class QuerysetMetaclass(type):
     """metaclass to add the dynamically generated comparison functions"""
@@ -105,8 +150,7 @@ class Queryset(object):
     def __getitem__(self, k):
         #TODO this should be more effecient than fetch but it isn't
         # Figure out slicing and indexing on parse.com if possible...
-        fetched = self._fetch()
-        return fetched[k]
+        return self._fetch()[k]
 
     def _fetch(self, count=False):
         """
@@ -155,7 +199,10 @@ class Queryset(object):
 
     def delete(self):
         batcher = connection.ParseBatcher()
-        batcher.batch_delete(self)
+        try:
+            batcher.batch_delete(self)
+        except ValueError:
+            pass
 
     def __repr__(self):
         return unicode(self._fetch())

@@ -13,7 +13,7 @@ import datetime
 
 from core import ResourceRequestNotFound
 from connection import register, ParseBatcher
-from datatypes import GeoPoint, Object, Function, ParseField
+from datatypes import GeoPoint, Object, Function, ParseField, ParseManyToManyField
 from user import User
 import query
 
@@ -75,9 +75,19 @@ class CollectedItem(Object):
 def get_order_number():
     return 5
 
+
 class Order(Object):
     total = ParseField(default=0)
     number = ParseField(default=get_order_number)
+    customer = ParseField()
+
+
+class Address(Object):
+    pass
+
+
+class Customer(Object):
+    addresses = ParseManyToManyField(Address)
 
 
 class ParseFieldTestCase(unittest.TestCase):
@@ -113,6 +123,67 @@ class DefaultValueObjectTestCase(unittest.TestCase):
         order = Order()
         order.save()
         self.assertEqual(order.number, 5)
+
+
+class TestManyToManyRelations(unittest.TestCase):
+    def setUp(self):
+        self.address1 = Address(
+            number="1",
+            street="Main St",
+            city="Foobar",
+            state="OR"
+        )
+        self.address1.save()
+        self.address2 = Address(
+            number="2",
+            street="Main St",
+            city="Foobar",
+            state="OR"
+        )
+        self.address2.save()
+        self.address3 = Address(
+            number="3",
+            street="Main St",
+            city="Foobar",
+            state="OR"
+        )
+        self.address3.save()
+
+        self.customer1 = Customer(name="Jane Smith")
+        self.customer1.save()
+        self.customer2 = Customer(name="John Smith")
+        self.customer2.save()
+
+    def tearDown(self):
+        qs = self.customer1.addresses.joint_class.Query.all()
+        qs.delete()
+        Address.Query.all().delete()
+        Customer.Query.all().delete()
+
+    def test_manytomany_field_returns_querymanager(self):
+        self.assertIsInstance(self.customer1.addresses, query.QueryManager)
+        self.assertTrue(issubclass(self.customer1.addresses.from_class, Customer))
+        self.assertTrue(issubclass(self.customer1.addresses.to_class, Address))
+        self.assertTrue(issubclass(self.customer1.addresses.model_class, Address))
+        self.assertEqual(self.customer1.addresses.joint_class.__name__, 'CustomerAddresss')
+
+    def test_add_related_object(self):
+        self.customer1.addresses.add(self.address1)
+        self.assertEqual(self.customer1.addresses.all()[0], self.address1)
+
+    def test_add_related_objects(self):
+        self.customer1.addresses.add(self.address1, self.address2)
+        self.assertEqual(self.customer1.addresses.all().count(), 2)
+
+    def test_clear_related_objects(self):
+        self.customer1.addresses.add(self.address1, self.address2)
+        self.customer1.addresses.clear()
+        self.assertEqual(self.customer1.addresses.all().count(), 0)
+
+    def test_only_returns_related_objects(self):
+        self.customer1.addresses.add(self.address1, self.address2)
+        self.customer2.addresses.add(self.address3)
+        self.assertEqual(self.customer2.addresses.all()[0], self.address3)
 
 
 class TestObject(unittest.TestCase):
@@ -283,6 +354,14 @@ class TestQuery(unittest.TestCase):
         qs = GameScore.Query.all()
         qs.delete()
         self.assertEqual(GameScore.Query.all().count(), 0)
+
+    def test_delete_empty_queryset(self):
+        qs = GameScore.Query.all()
+        qs.delete()
+        try:
+            self.assertEqual(GameScore.Query.all().count(), 0)
+        except ValueError:
+            self.fail('Deleting empty queryset raised ValueError')
 
     def test_indexing(self):
         qs = GameScore.Query.all()

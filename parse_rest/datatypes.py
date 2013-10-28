@@ -15,7 +15,7 @@ import base64
 import datetime
 
 from connection import API_ROOT, ParseBase
-from query import QueryManager
+import query 
 
 
 class ParseType(object):
@@ -176,6 +176,14 @@ class File(ParseType):
     _absolute_url = property(lambda self: self._api_url)
 
 
+class ParseM2M(Relation):
+    def convert_from_parse(parse_data):
+        pass
+
+    def convert_to_parse(python_object, as_pointer=False):
+        pass
+
+
 class Function(ParseBase):
     ENDPOINT_ROOT = '/'.join((API_ROOT, 'functions'))
 
@@ -189,6 +197,16 @@ class Function(ParseBase):
 class ParseResource(ParseBase, Pointer):
 
     PROTECTED_ATTRIBUTES = ['objectId', 'createdAt', 'updatedAt']
+
+    def __eq__(self, other):
+        if not isinstance(other, ParseResource):
+            return False
+        if not self.__class__ == other.__class__:
+            return False
+
+        if self.objectId is None:
+            return self is other
+        return self.objectId == other.objectId
 
     @classmethod
     def retrieve(cls, resource_id):
@@ -293,7 +311,7 @@ class ParseField(object):
         self._default = value
     default = property(_get_default, _set_default)
 
-    def __init__(self, **kwargs):
+    def __init__(self, *args, **kwargs):
         self._update_attrs(kwargs)
 
     def _update_attrs(self, dct):
@@ -307,14 +325,38 @@ class ParseField(object):
                 ))  
 
 
+class ParseManyToManyField(ParseField):
+    _model_class = None
+    _related_class = None
+    
+    def __init__(self, related, *args, **kwargs):
+        self._related_class = related
+        super(ParseManyToManyField, self).__init__(*args, **kwargs)
+
+    def query_manager(self, instance):
+        return query.M2MQueryManager(
+            self._model_class, self._related_class, instance)
+
+    def add_to_class(self, cls):
+        self._model_class = cls
+
+
 class ObjectMetaclass(type):
     def __new__(cls, name, bases, dct):
         cls = super(ObjectMetaclass, cls).__new__(cls, name, bases, dct)
         cls.set_endpoint_root()
-        cls.Query = QueryManager(cls)
-        module = dct.pop('__module__')
+        cls.Query = query.QueryManager(cls)
+        try:
+            module = dct.pop('__module__')
+        except KeyError:
+            pass
         fields = cls._get_fields(dct)
         cls._defaults = cls._get_defaults(dct)
+        cls._m2m_fields = cls._get_m2m_fields(dct)
+        for attr, field in cls._get_m2m_fields(dct).items():
+            field.add_to_class(cls)
+            setattr(cls, attr, property(lambda self: field.query_manager(self)))
+            del cls._defaults[attr]
         return cls 
 
     def _get_fields(cls, dct):
@@ -326,6 +368,16 @@ class ObjectMetaclass(type):
                 if isinstance(value, ParseField)
             ]   
         )   
+
+    def _get_m2m_fields(cls, dct):
+        return dict(
+            [
+                (field, value)
+                for field, value
+                in dct.items()
+                if isinstance(value, ParseManyToManyField)
+            ]
+        )
 
     def _get_defaults(cls, dct):
         return dict([
@@ -343,6 +395,7 @@ class Object(ParseResource):
     def __init__(self, **kwargs):
         for key, value in self._defaults.items():
             setattr(self, key, ParseType.convert_from_parse(value))
+
         super(Object, self).__init__(**kwargs)
 
     @classmethod
