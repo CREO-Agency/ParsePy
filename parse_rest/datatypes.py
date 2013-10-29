@@ -47,13 +47,20 @@ class ParseType(object):
                          for k, v in python_object._editable_attrs.items()
                          ])
 
-        python_type = Object if is_object else type(python_object)
+
+        python_type = type(python_object)
+        if is_object:
+            python_type = Object
+        elif isinstance(python_object, ParseResource):
+            python_type = ParseResource
 
         # classes that need to be cast to a different type before serialization
         transformation_map = {
             datetime.datetime: Date,
-            Object: Pointer
-            }
+            Object: Pointer,
+            ParseResource: Pointer,
+        }
+
 
         if python_type in transformation_map:
             klass = transformation_map.get(python_type)
@@ -83,9 +90,10 @@ class Pointer(ParseType):
         self._object = obj
 
     def _to_native(self):
+        class_name = self._object.__class__.__name__
         return {
             '__type': 'Pointer',
-            'className': self._object.__class__.__name__,
+            'className': class_name if class_name != "User" else "_User",
             'objectId': self._object.objectId
             }
 
@@ -408,6 +416,9 @@ class Object(ParseResource):
     def factory(cls, class_name):
         class DerivedClass(cls):
             pass
+        if class_name == "_User":
+            from user import User
+            return User
         DerivedClass.__name__ = str(class_name)
         DerivedClass.set_endpoint_root()
         return DerivedClass

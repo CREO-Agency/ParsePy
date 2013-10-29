@@ -100,6 +100,9 @@ class M2MQueryManager(QueryManager):
     def clear(self, *args):
         self.joint_class.Query.all().delete()
 
+    def exists(self):
+        return self.all().exists()
+
     @property
     def _from_relation(self):
         return self.from_class.__name__.lower()
@@ -107,7 +110,6 @@ class M2MQueryManager(QueryManager):
     @property
     def _to_relation(self):
         return self.to_class.__name__.lower()
-
 
 
 class QuerysetMetaclass(type):

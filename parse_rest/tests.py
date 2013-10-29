@@ -633,8 +633,8 @@ class TestUserPointer(unittest.TestCase):
         u.delete()
 
     def tearDown(self):
-        self._destroy_user()
         Foo.Query.all().delete()
+        self._destroy_user()
 
     def _get_user(self):
         try:
@@ -657,6 +657,7 @@ class TestUserPointer(unittest.TestCase):
         f = Foo(user=self._get_user())
         f.save()
         new_f = Foo.Query.get(objectId=f.objectId)
+        self.assertEqual(new_f.user, f.user)
 
 if __name__ == "__main__":
     # command line
