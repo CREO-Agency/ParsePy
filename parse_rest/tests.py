@@ -201,6 +201,12 @@ class TestManyToManyRelations(unittest.TestCase):
         self.customer1.addresses.clear()
         self.assertEqual(self.customer1.addresses.all().count(), 0)
 
+    def test_clear_empty_related_objects(self):
+        try:
+            self.customer1.addresses.clear()
+        except:
+            self.fail('Failed to handle clearing empty m2m')
+
     def test_only_returns_related_objects(self):
         self.customer1.addresses.add(self.address1, self.address2)
         self.customer2.addresses.add(self.address3)

@@ -245,7 +245,7 @@ class ParseResource(ParseBase, Pointer):
     def _set_created_datetime(self, value):
         self._created_at = Date(value)
 
-    def save(self, batch=False):
+    def save(self, batch=False, **kwargs):
         if self.objectId:
             return self._update(batch=batch)
         else:

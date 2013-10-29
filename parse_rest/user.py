@@ -55,7 +55,7 @@ class User(ParseResource):
         return {'X-Parse-Session-Token': self.sessionToken}
 
     @login_required
-    def save(self):
+    def save(self, **kwargs):
         session_header = {'X-Parse-Session-Token': self.sessionToken}
         url = self._absolute_url
         data = self._to_native()
