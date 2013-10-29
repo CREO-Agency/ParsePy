@@ -73,6 +73,10 @@ class CollectedItem(Object):
     pass
 
 
+class Foo(Object):
+    pass
+        
+
 def get_order_number():
     return 5
 
@@ -612,6 +616,47 @@ class TestUser(unittest.TestCase):
         user = CustomUser.login('foo', 'bar')
         self.assertTrue(user.custom)
 
+
+class TestUserPointer(unittest.TestCase):
+    USERNAME = "dhelmet@spaceballs.com"
+    PASSWORD = "12345"
+
+    def setUp(self):
+        self.username = TestUserPointer.USERNAME
+        self.password = TestUserPointer.PASSWORD
+
+        try:
+            u = User.login(self.USERNAME, self.PASSWORD)
+        except ResourceRequestNotFound:
+            # if the user doesn't exist, that's fine
+            return
+        u.delete()
+
+    def tearDown(self):
+        self._destroy_user()
+        Foo.Query.all().delete()
+
+    def _get_user(self):
+        try:
+            user = User.signup(self.username, self.password)
+        except:
+            user = User.Query.get(username=self.username)
+        return user
+
+    def _destroy_user(self):
+        user = self._get_logged_user()
+        user and user.delete()
+
+    def _get_logged_user(self):
+        if User.Query.filter(username=self.username).exists():
+            return User.login(self.username, self.password)
+        else:
+            return self._get_user()
+
+    def test_user_pointer(self):
+        f = Foo(user=self._get_user())
+        f.save()
+        new_f = Foo.Query.get(objectId=f.objectId)
 
 if __name__ == "__main__":
     # command line
