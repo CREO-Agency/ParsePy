@@ -9,6 +9,7 @@ import sys
 import subprocess
 import unittest
 import datetime
+import random
 
 
 from core import ResourceRequestNotFound
@@ -75,10 +76,22 @@ class CollectedItem(Object):
 def get_order_number():
     return 5
 
+current_order = 0
+def get_sequential_order():
+    global current_order
+    current_order += 1
+    return current_order
+
+
 
 class Order(Object):
     total = ParseField(default=0)
     number = ParseField(default=get_order_number)
+    customer = ParseField()
+
+class SequentialOrder(Object):
+    total = ParseField(default=0)
+    number = ParseField(default=get_sequential_order)
     customer = ParseField()
 
 
@@ -123,6 +136,14 @@ class DefaultValueObjectTestCase(unittest.TestCase):
         order = Order()
         order.save()
         self.assertEqual(order.number, 5)
+
+    def test_callable_default_called(self):
+        order = SequentialOrder()
+        order.save()
+        self.assertEqual(order.number, 1)
+        order = SequentialOrder()
+        order.save()
+        self.assertEqual(order.number, 2)
 
 
 class TestManyToManyRelations(unittest.TestCase):
@@ -295,6 +316,14 @@ class TestObject(unittest.TestCase):
         self.assert_(GameScore.Query.filter(player_name='Jane').count() == 0,
                      "batch_delete didn't delete objects")
 
+
+    def test_empty_batch(self):
+        scores = []
+        batcher = ParseBatcher()
+        try:
+            batcher.batch_save(scores)
+        except ValueError:
+            self.fail('Batcher raised ValueError due to empty batch list')
 
 class TestTypes(unittest.TestCase):
     def setUp(self):
@@ -565,6 +594,17 @@ class TestUser(unittest.TestCase):
 
         self.assert_(User.Query.filter(phone=phone_number).exists(),
                      'Failed to update user data. New info not on Parse')
+
+    def test_user_login_uses_subclass(self):
+        class CustomUser(User):
+            @property
+            def custom(self):
+                return True
+
+        CustomUser.signup(username="foo", password="bar")
+
+        user = CustomUser.login('foo', 'bar')
+        self.assertTrue(user.custom)
 
 
 if __name__ == "__main__":

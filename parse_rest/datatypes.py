@@ -302,10 +302,7 @@ class ParseField(object):
     _default = None
 
     def _get_default(self):
-        if callable(self._default):
-            return self._default()
-        else:
-            return self._default
+        return self._default
 
     def _set_default(self, value):
         self._default = value
@@ -401,6 +398,8 @@ class Object(ParseResource):
 
     def __init__(self, **kwargs):
         for key, value in self._defaults.items():
+            if callable(value):
+                value = value()
             setattr(self, key, ParseType.convert_from_parse(value))
 
         super(Object, self).__init__(**kwargs)

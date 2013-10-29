@@ -68,14 +68,14 @@ class User(ParseResource):
 
     @staticmethod
     def signup(username, password, **kw):
-        response_data = User.POST('', username=username, password=password, **kw)
+        response_data = User.POST('', username=username, password=password, is_active=True, **kw)
         response_data.update({'username': username})
         return User(**response_data)
 
-    @staticmethod
-    def login(username, passwd):
+    @classmethod
+    def login(cls, username, passwd):
         login_url = '/'.join([API_ROOT, 'login'])
-        return User(**User.GET(login_url, username=username, password=passwd))
+        return cls(**User.GET(login_url, username=username, password=passwd))
 
     @staticmethod
     def login_auth(auth):
